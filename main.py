@@ -23,27 +23,18 @@ class Main:
 
     async def runnable(self):
         logging.info("Starting Script")
-        while True:
-            if not self.session:
-                logging.info("Creating session")
-                self.session = aiohttp.ClientSession(
-                    connector=aiohttp.TCPConnector(ssl=self.config.Getcfgvalue("modem.verify_ssl", False)),
-                    cookie_jar=aiohttp.CookieJar(unsafe=True))
-            await self.run()
-            await asyncio.sleep(self.config.Getcfgvalue("general.sleep_interval", 60))
 
-    async def run(self):
-        if await self.ensure_login():
-            pass
-        # self.scrape_modem()
-        await self.scrape_modem()
+        logging.info("Creating session")
+        self.session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=self.config.Getcfgvalue("modem.verify_ssl", False)),
+            cookie_jar=aiohttp.CookieJar(unsafe=True))
+        await self.ensure_login()
+        while True:
+            await self.scrape_modem()
+            await asyncio.sleep(self.config.Getcfgvalue("general.sleep_interval", 60))
 
     async def scrape_modem(self):
         res = await self.http(self.session.get, f'{self.router_url}/comcast_network.jst')
-        if res.status == 403:
-            logging.warning("Got 403 when scraping page, waiting untill next loop")
-            return
-
         logging.info("Grabbed status page")
         html = await res.text()
         tree = etree.HTML(html)
@@ -66,7 +57,7 @@ class Main:
             return True
 
         if any('DUKSID' == e[0] for e in self.session.cookie_jar.filter_cookies(self.router_url).items()):
-            res = await self.http(self.session.get, f'{self.router_url}/at_a_glance.jst', raise_for_error=False)
+            res = await self.http(self.session.get, f'{self.router_url}/at_a_glance.jst', raise_for_status=False)
             if res.status == 200:
                 return True
             logging.info("Auth session invalidated")
@@ -78,7 +69,7 @@ class Main:
             params['username'] = self.config.Getcfgvalue("modem.username")
         if self.config.Getcfgvalue("modem.password", False):
             params['password'] = self.config.Getcfgvalue("modem.password")
-        res = await self.http(self.session.post, f'{self.router_url}/check.jst', data=params)
+        res = await self.session.post(f'{self.router_url}/check.jst', data=params, allow_redirects=False)
         if res.status == 302:
             logging.info("Auth session Created")
             return True
@@ -86,15 +77,13 @@ class Main:
             logging.info("Failed to get Auth session")
             return False
 
-    async def http(self, func, url, raise_for_error=True, **kwargs):
-        if 'raise_for_error' in kwargs:
-            kwargs.pop('raise_for_error')
+    async def http(self, func, url, raise_for_status=True, **kwargs):
         current_retry_num = 0
         retry = True
         while retry:
             try:
                 data = await func(url, **kwargs, allow_redirects=False)
-                if raise_for_error:
+                if raise_for_status:
                     data.raise_for_status()
                 return data
             except (aiohttp.ClientConnectorError, ConnectionRefusedError) as ex:
