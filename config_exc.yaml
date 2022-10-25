@@ -1,0 +1,22 @@
+general:
+  log_level: INFO
+  sleep_interval: 10
+  max_retry: 6
+  wait_retry: 5
+
+modem:
+  verify_ssl: False
+  require_login: True
+  username: test
+  password: hh
+  proto: http
+  host: 127.0.0.1
+  port: 400
+
+
+influx_org: null
+influx_url: http://localhost:8086
+influx_bucket: cable_modem_stats
+influx_token: null
+influx_verify_ssl: False
+

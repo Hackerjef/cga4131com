@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+beautifulsoup4 = "*"
+click = "*"
+influxdb-client = {extras = ["async", "ciso"], version = "*"}
+asyncio = "*"
+pyyaml = "*"
+aiohttp = {extras = ["speedups"], version = "*"}
+lxml = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
