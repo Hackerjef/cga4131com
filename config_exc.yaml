@@ -1,3 +1,7 @@
+webserver:
+  host: 127.0.0.1
+  port: 401
+
 general:
   log_level: INFO
   sleep_interval: 10
@@ -12,11 +16,3 @@ modem:
   proto: http
   host: 127.0.0.1
   port: 400
-
-
-influx_org: null
-influx_url: http://localhost:8086
-influx_bucket: cable_modem_stats
-influx_token: null
-influx_verify_ssl: False
-

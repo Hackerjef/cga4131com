@@ -12,6 +12,7 @@ asyncio = "*"
 pyyaml = "*"
 aiohttp = {extras = ["speedups"], version = "*"}
 lxml = "*"
+pandas = "*"
 
 [dev-packages]
 
