@@ -45,13 +45,30 @@ class Main:
                 pass
 
         self.webapp = web.Application()
-        self.webapp.add_routes([web.get('/json', self.ws_json)])
+        self.webapp.add_routes([web.get('/json', self.ws_json), web.get('/metrics', self.ws_metrics)])
         self.webapp_task = self.loop.create_task(wrapper(
             _run_app(self.webapp, print=_print, host=self.Getcfgvalue('webserver.host', '127.0.0.1'),
                      port=self.Getcfgvalue('webserver.port', 418))))
 
     async def ws_json(self, response):
         return web.json_response(self.export_data)
+
+    async def ws_metrics(self, response):
+        result = []
+
+        for downstream in self.export_data["downstream"]:
+            result.append(f"downstream{{channel='{downstream['channel']}',lock_status='{downstream['lock_status']}',frequency='{downstream['frequency']}',snr='{downstream['snr']}',power_level='{downstream['power_level']}'}} 1")
+
+        for upstream in self.export_data['upstream']:
+            result.append(f"upstream{{channel='{upstream['channel']}',lock_status='{upstream['lock_status']}',frequency='{upstream['frequency']}',symbol_rate='{upstream['symbol_rate']}',power_level='{upstream['power_level']}'}} 1")
+
+        for index, error in enumerate(self.export_data['error']):
+            result.append(f"error{{channel='{index}',unerrored='{error['unerrored']}',correctable='{error['correctable']}',uncorrectable='{error['uncorrectable']}'}} 1")
+
+        result.append(f"uptime {self.export_data['uptime']}")
+
+        return web.Response(text="\n".join(result))
+        # return web.json_response(self.export_data)
 
     async def runnable(self):
         logging.info("Creating session")
@@ -73,8 +90,10 @@ class Main:
 
         text = await res.text()
         soup = BeautifulSoup(await res.text(), 'html.parser')
-        uptime_stamp = soup.select_one('#content > div:nth-child(3) > div:nth-child(4) > span.value').text.replace(' days', '').replace('h:', '').replace('m:', '').replace('s', '').split(' ')
-        uptime = timedelta(days=int(uptime_stamp[0]), hours=int(uptime_stamp[1]), minutes=int(uptime_stamp[2]), seconds=int(uptime_stamp[3])).seconds
+        uptime_stamp = soup.select_one('#content > div:nth-child(3) > div:nth-child(4) > span.value').text.replace(
+            ' days', '').replace('h:', '').replace('m:', '').replace('s', '').split(' ')
+        uptime = timedelta(days=int(uptime_stamp[0]), hours=int(uptime_stamp[1]), minutes=int(uptime_stamp[2]),
+                           seconds=int(uptime_stamp[3])).seconds
 
         dstb = soup.select_one('#content > div:nth-of-type(12) > table > tbody')
         ustb = soup.select_one('#content > div:nth-of-type(13) > table > tbody')
@@ -168,7 +187,7 @@ class Main:
             for key, value in v.items():
                 match key:
                     case "frequency":
-                        _dict[key] = value.replace(" MHz", "")
+                        _dict[key] = value.replace(" MHz", "").replace(" ", "")
                     case "snr":
                         _dict[key] = value.replace(" dB", "")
                     case "power_level":
