@@ -57,13 +57,13 @@ class Main:
         result = []
 
         for downstream in self.export_data["downstream"]:
-            result.append(f"downstream{{channel='{downstream['channel']}',lock_status='{downstream['lock_status']}',frequency='{downstream['frequency']}',snr='{downstream['snr']}',power_level='{downstream['power_level']}'}} 1")
+            result.append(f'downstream{{channel="{downstream["channel"]}",lock_status="{downstream["lock_status"]}",frequency="{downstream["frequency"]}",snr="{downstream["snr"]}",power_level="{downstream["power_level"]}"}} 1')
 
         for upstream in self.export_data['upstream']:
-            result.append(f"upstream{{channel='{upstream['channel']}',lock_status='{upstream['lock_status']}',frequency='{upstream['frequency']}',symbol_rate='{upstream['symbol_rate']}',power_level='{upstream['power_level']}'}} 1")
+            result.append(f'upstream{{channel="{upstream["channel"]}",lock_status="{upstream["lock_status"]}",frequency="{upstream["frequency"]}",symbol_rate="{upstream["symbol_rate"]}",power_level="{upstream["power_level"]}"}} 1')
 
         for index, error in enumerate(self.export_data['error']):
-            result.append(f"error{{channel='{index}',unerrored='{error['unerrored']}',correctable='{error['correctable']}',uncorrectable='{error['uncorrectable']}'}} 1")
+            result.append(f'error{{channel="{index}",unerrored="{error["unerrored"]}",correctable="{error["correctable"]}",uncorrectable="{error["uncorrectable"]}"}} 1')
 
         result.append(f"uptime {self.export_data['uptime']}")
 
