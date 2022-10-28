@@ -46,7 +46,9 @@ class Main:
 
         self.webapp = web.Application()
         self.webapp.add_routes([web.get('/json', self.ws_json)])
-        self.webapp_task = self.loop.create_task(wrapper(_run_app(self.webapp, print=_print, host=self.Getcfgvalue('webserver.host', '127.0.0.1'), port=self.Getcfgvalue('webserver.port', 418))))
+        self.webapp_task = self.loop.create_task(wrapper(
+            _run_app(self.webapp, print=_print, host=self.Getcfgvalue('webserver.host', '127.0.0.1'),
+                     port=self.Getcfgvalue('webserver.port', 418))))
 
     async def ws_json(self, response):
         return web.json_response(self.export_data)
@@ -56,7 +58,10 @@ class Main:
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(ssl=self.Getcfgvalue("modem.verify_ssl", False)),
             cookie_jar=aiohttp.CookieJar(unsafe=True))
-        await self.ensure_login()
+
+        if not await self.ensure_login():
+            raise Exception("Login invalid + locked out")
+
         while not self.shutdown_event.is_set():
             await self.scrape_modem()
             await asyncio.sleep(self.Getcfgvalue("general.sleep_interval", 60))
@@ -66,14 +71,14 @@ class Main:
         res = await self.http(self.session.get, f'{self.router_url}/comcast_network.jst')
         logging.info("Grabbed status page")
 
+        text = await res.text()
         soup = BeautifulSoup(await res.text(), 'html.parser')
-        uptime_stamp = soup.select_one('#content > div:nth-child(3) > div:nth-child(4) > span.value').text.replace(
-            ' days', '').replace('h:', '').replace('m:', '').replace('s', '').split(' ')
-        uptime = timedelta(days=int(uptime_stamp[0]), hours=int(uptime_stamp[1]), minutes=int(uptime_stamp[2]),
-                           seconds=int(uptime_stamp[3])).seconds
-        dstb = soup.select_one('#content > div:nth-of-type(5) > table > tbody')
-        ustb = soup.select_one('#content > div:nth-of-type(6) > table > tbody')
-        ertb = soup.select_one('#content > div:nth-of-type(7) > table > tbody')
+        uptime_stamp = soup.select_one('#content > div:nth-child(3) > div:nth-child(4) > span.value').text.replace(' days', '').replace('h:', '').replace('m:', '').replace('s', '').split(' ')
+        uptime = timedelta(days=int(uptime_stamp[0]), hours=int(uptime_stamp[1]), minutes=int(uptime_stamp[2]), seconds=int(uptime_stamp[3])).seconds
+
+        dstb = soup.select_one('#content > div:nth-of-type(12) > table > tbody')
+        ustb = soup.select_one('#content > div:nth-of-type(13) > table > tbody')
+        ertb = soup.select_one('#content > div:nth-of-type(14) > table > tbody')
 
         downstream = [[] for x in dstb.find_all("tr")]
         upstream = [[] for x in ustb.find_all("tr")]
